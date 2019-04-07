@@ -1,0 +1,69 @@
+Python 3.6
+**********
+
+
+apt install build-essential checkinstall
+apt install libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
+wget https://www.python.org/ftp/python/3.6.5/Python-3.6.5.tar.xz
+tar xvf Python-3.6.5.tar.xz
+cd Python-3.6.5/
+./configure --prefix=/usr/local
+make altinstall
+/usr/local/bin/pip3.6 install websockets
+
+
+
+Firewall
+********
+ufw disable
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow ssh
+ufw allow https
+ufw enable
+
+
+Letsencrypt (ojo que algunos comandos son interactivos)
+***********
+
+apt-get update
+apt-get install software-properties-common
+add-apt-repository universe
+add-apt-repository ppa:certbot/certbot
+apt-get update
+apt-get install certbot python-certbot-apache 
+
+
+
+Apache
+******
+
+
+
+
+apt-get install apache2
+
+a2enmod proxy
+a2enmod proxy_http
+a2enmod proxy_wstunnel
+
+/etc/apache2/sites-available/mypeer.net.comf:
+
+<VirtualHost *:80>
+  ServerName mypeer.net
+
+  <Location "/">
+    ProxyPass "ws://localhost:8765/"
+  </Location>
+  ProxyPassReverse / http://localhost:8765/
+RewriteEngine on
+RewriteCond %{SERVER_NAME} =mypeer.net
+RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]
+</VirtualHost>
+
+
+a2ensite mypeer.net
+
+certbot --apache
+
+
