@@ -8,11 +8,10 @@ listeners = {}
 
 async def recv(websocket, path):
 
-    linkupId = None
+    linkupIds = []
     defaultLinkupId = path[1:]
 
     go = True
-    listen = False
 
     print('opened websocket for: ' + defaultLinkupId)
 
@@ -25,6 +24,8 @@ async def recv(websocket, path):
             print('message received, it is: ' + messageRcvd)
         except asyncio.TimeoutError:
             print('timeout waiting for message')
+        except:
+            print('error waiting for message')
 
 
         if messageRcvd:
@@ -32,11 +33,13 @@ async def recv(websocket, path):
             if message['action'] == 'pong':
                 print('received pong')
             elif message['action'] == 'listen':
-                listen = True
                 linkupId = message.get('linkupId', defaultLinkupId)
+                if linkupId not in linkupIds:
+                    linkupIds.append(linkupId)
                 if linkupId not in listeners:
                     listeners[linkupId] = []
-                listeners[linkupId].append(websocket)
+                if websocket not in listeners[linkupId]:
+                    listeners[linkupId].append(websocket)
                 print('registering a listener for ' + linkupId)
             elif message['action'] == 'send':
 
@@ -54,16 +57,21 @@ async def recv(websocket, path):
                     for sock in to_remove:
                         listeners[receiver].remove(sock)
         else:
-            if listen:
+            if linkupIds:
                 print('sending ping')
-                await websocket.send(json.dumps({'action' : 'ping'}))
+                try:
+                    await websocket.send(json.dumps({'action' : 'ping'}))
+                except:
+                    print('failed to send ping')
             else:
                 go = False
+    for linkupId in linkupIds:
+        if linkupId in listeners and websocket in listeners[linkupId]:
+            print('removing websocket from ' + linkupId)
+            listeners[linkupId].remove(websocket)
+    print('closing websocket')
 
-    if listen and linkupId in listeners and websocket in listeners[linkupId]:
-        listeners[linkupId].remove(websocket)
-
-start_server = websockets.serve(recv, '*', 8765)
+start_server = websockets.serve(recv, 'localhost', 8765)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
