@@ -1,4 +1,4 @@
-#!/usr/local/Cellar/python/3.6.4_4/bin/python3
+#!/usr/local/Cellar/python/3.7.3/bin/python3
 
 import asyncio
 import websockets
@@ -46,6 +46,7 @@ async def recv(websocket, path):
                 receiver = message.get('linkupId', defaultLinkupId)
 
                 print('trying to send a message to ' + receiver)
+                #sent = False;
                 if receiver in listeners:
                     to_remove = []
                     for sock in listeners[receiver]:
@@ -56,6 +57,25 @@ async def recv(websocket, path):
                             to_remove.append(sock)
                     for sock in to_remove:
                         listeners[receiver].remove(sock)
+                    #if not sent:
+                    #    try:
+                    #        websocket.send(json.dumps({'action': 'nack', 'linkupId': message['reply'], 'missingLinkupId': receiver}))
+                    #        print('could not find listener for ' + receiver + ', sending nack')
+                    #    except:
+                    #        print('failed to send nack')
+            elif message['action'] == 'query':
+                targets = message['linkupIds']
+                queryId = message['queryId']
+                hits = []
+                for target in targets:
+                    if target in listeners:
+                        for sock in listeners[target]:
+                            if sock.open:
+                                hits.append(target)
+                                break
+                print('replying to query with id ' + queryId + ' with results: ' + str(hits))
+                await websocket.send(json.dumps({'action': 'query-reply', 'queryId': queryId, 'hits': hits}))
+
         else:
             if linkupIds:
                 print('sending ping')
