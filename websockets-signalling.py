@@ -3,6 +3,7 @@
 import asyncio
 import websockets
 import json
+import random
 
 listeners = {}
 
@@ -44,12 +45,16 @@ async def recv(websocket, path):
             elif message['action'] == 'send':
 
                 receiver = message.get('linkupId', defaultLinkupId)
+                limit    = message.get('limit', None)
 
                 print('trying to send a message to ' + receiver)
                 #sent = False;
                 if receiver in listeners:
                     to_remove = []
-                    for sock in listeners[receiver]:
+                    all_socks = listeners[receiver]
+                    sock_targets = random.sample(all_socks, min(limit, len(all_socks))) if limit else all_socks
+
+                    for sock in sock_targets:
                         if sock.open:
                             await sock.send(json.dumps(message))
                             print('found listener for ' + receiver + ', sent message')
